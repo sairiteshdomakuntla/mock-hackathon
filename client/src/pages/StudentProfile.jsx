@@ -2,6 +2,20 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import { Line, Bar } from 'react-chartjs-2';
+import { Chart, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend } from 'chart.js';
+
+// Register Chart.js components
+Chart.register(
+  CategoryScale, 
+  LinearScale, 
+  PointElement, 
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 const StudentProfile = () => {
   const { id } = useParams();
@@ -14,10 +28,12 @@ const StudentProfile = () => {
   const [loadingSuggestion, setLoadingSuggestion] = useState(false);
   const [editingSEL, setEditingSEL] = useState(false);
   const [selForm, setSelForm] = useState({
-    empathy: student?.selScores?.empathy || '',
-    regulation: student?.selScores?.regulation || '',
-    cooperation: student?.selScores?.cooperation || ''
+    empathy: '',
+    regulation: '',
+    cooperation: ''
   });
+  const [newScore, setNewScore] = useState('');
+  const [addingScore, setAddingScore] = useState(false);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -29,6 +45,15 @@ const StudentProfile = () => {
           }
         });
         setStudent(response.data);
+        
+        // Initialize SEL form with current values
+        if (response.data.selScores) {
+          setSelForm({
+            empathy: response.data.selScores.empathy || '',
+            regulation: response.data.selScores.regulation || '',
+            cooperation: response.data.selScores.cooperation || ''
+          });
+        }
       } catch (err) {
         setError('Failed to load student data');
         console.error(err);
@@ -139,6 +164,101 @@ const StudentProfile = () => {
     }
   };
 
+  const handleAddLiteracyScore = async (e) => {
+    e.preventDefault();
+    if (!newScore) return;
+
+    setAddingScore(true);
+    try {
+      const response = await axios.post(
+        `http://localhost:5000/api/students/${id}/literacy-score`,
+        { score: parseFloat(newScore) },
+        {
+          headers: {
+            Authorization: `Bearer ${user.token}`
+          }
+        }
+      );
+      
+      // Update student with new literacy scores
+      setStudent({
+        ...student,
+        literacyScores: response.data.literacyScores
+      });
+      
+      // Clear form
+      setNewScore('');
+      setAddingScore(false);
+    } catch (err) {
+      setError('Failed to add literacy score');
+      console.error(err);
+    } finally {
+      setAddingScore(false);
+    }
+  };
+
+  // Prepare chart data for literacy scores
+  const prepareLiteracyChartData = () => {
+    if (!student?.literacyScores || student.literacyScores.length === 0) {
+      return null;
+    }
+
+    // Sort scores by date
+    const sortedScores = [...student.literacyScores].sort(
+      (a, b) => new Date(a.date) - new Date(b.date)
+    );
+
+    return {
+      labels: sortedScores.map(score => 
+        new Date(score.date).toLocaleDateString()
+      ),
+      datasets: [
+        {
+          label: 'Literacy Score',
+          data: sortedScores.map(score => score.score),
+          fill: false,
+          backgroundColor: 'rgb(59, 130, 246)',
+          borderColor: 'rgba(59, 130, 246, 0.5)',
+        }
+      ]
+    };
+  };
+
+  // Prepare chart data for SEL scores
+  const prepareSELChartData = () => {
+    if (!student?.selScores) {
+      return null;
+    }
+
+    return {
+      labels: ['Empathy', 'Self-Regulation', 'Cooperation'],
+      datasets: [
+        {
+          label: 'SEL Competencies',
+          data: [
+            student.selScores.empathy || 0,
+            student.selScores.regulation || 0,
+            student.selScores.cooperation || 0
+          ],
+          backgroundColor: [
+            'rgba(255, 206, 86, 0.6)',
+            'rgba(75, 192, 192, 0.6)',
+            'rgba(54, 162, 235, 0.6)'
+          ],
+          borderColor: [
+            'rgba(255, 206, 86, 1)',
+            'rgba(75, 192, 192, 1)',
+            'rgba(54, 162, 235, 1)'
+          ],
+          borderWidth: 1
+        }
+      ]
+    };
+  };
+
+  const literacyChartData = student ? prepareLiteracyChartData() : null;
+  const selChartData = student ? prepareSELChartData() : null;
+
   if (loading) {
     return (
       <div className="py-8 flex justify-center">
@@ -206,20 +326,59 @@ const StudentProfile = () => {
             </div>
           </div>
 
-          {/* SEL Scores Section */}
+          {/* Literacy Score Chart */}
+          <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
+            <div className="px-4 py-5 sm:px-6">
+              <h2 className="text-lg leading-6 font-medium text-gray-900">Literacy Progress</h2>
+            </div>
+            <div className="border-t border-gray-200 p-4">
+              {literacyChartData ? (
+                <div style={{ height: "300px" }}>
+                  <Line 
+                    data={literacyChartData} 
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      scales: {
+                        y: {
+                          beginAtZero: false,
+                          title: {
+                            display: true,
+                            text: 'Score'
+                          }
+                        },
+                        x: {
+                          title: {
+                            display: true,
+                            text: 'Date'
+                          }
+                        }
+                      }
+                    }}
+                  />
+                </div>
+              ) : (
+                <p className="text-center text-gray-500 py-10">
+                  No literacy data available to display chart.
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* SEL Chart */}
           <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
             <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
               <h2 className="text-lg leading-6 font-medium text-gray-900">SEL Competencies</h2>
-              <button 
-                onClick={() => setEditingSEL(true)}
+              <button
+                onClick={() => setEditingSEL(!editingSEL)} 
                 className="px-3 py-1 border border-blue-300 rounded-md text-sm text-blue-600 hover:bg-blue-50"
               >
-                Update Scores
+                {editingSEL ? 'Cancel' : 'Update SEL Scores'}
               </button>
             </div>
-            <div className="border-t border-gray-200">
+            <div className="border-t border-gray-200 p-4">
               {editingSEL ? (
-                <form onSubmit={handleUpdateSEL} className="p-4">
+                <form onSubmit={handleUpdateSEL} className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {/* Empathy input */}
                     <div>
@@ -228,7 +387,7 @@ const StudentProfile = () => {
                       </label>
                       <select
                         id="empathy"
-                        value={selForm.empathy || ''}
+                        value={selForm.empathy}
                         onChange={(e) => setSelForm({...selForm, empathy: e.target.value})}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                       >
@@ -246,7 +405,7 @@ const StudentProfile = () => {
                       </label>
                       <select
                         id="regulation"
-                        value={selForm.regulation || ''}
+                        value={selForm.regulation}
                         onChange={(e) => setSelForm({...selForm, regulation: e.target.value})}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                       >
@@ -264,7 +423,7 @@ const StudentProfile = () => {
                       </label>
                       <select
                         id="cooperation"
-                        value={selForm.cooperation || ''}
+                        value={selForm.cooperation}
                         onChange={(e) => setSelForm({...selForm, cooperation: e.target.value})}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                       >
@@ -276,15 +435,7 @@ const StudentProfile = () => {
                     </div>
                   </div>
                   
-
-                  <div className="mt-4 flex justify-end space-x-2">
-                    <button 
-                      type="button"
-                      onClick={() => setEditingSEL(false)}
-                      className="px-4 py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50"
-                    >
-                      Cancel
-                    </button>
+                  <div className="flex justify-end">
                     <button 
                       type="submit"
                       className="px-4 py-2 bg-blue-600 border border-transparent rounded-md text-sm text-white hover:bg-blue-700"
@@ -293,6 +444,26 @@ const StudentProfile = () => {
                     </button>
                   </div>
                 </form>
+              ) : selChartData ? (
+                <div style={{ height: "300px" }}>
+                  <Bar 
+                    data={selChartData}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      scales: {
+                        y: {
+                          beginAtZero: true,
+                          max: 5,
+                          title: {
+                            display: true,
+                            text: 'Rating (1-5)'
+                          }
+                        }
+                      }
+                    }}
+                  />
+                </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
                   <div className="bg-yellow-50 p-4 rounded-lg">
@@ -320,13 +491,53 @@ const StudentProfile = () => {
 
           {/* Literacy Scores Section */}
           <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
-            <div className="px-4 py-5 sm:px-6">
+            <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
               <h2 className="text-lg leading-6 font-medium text-gray-900">Literacy Scores</h2>
+              <button 
+                onClick={() => setAddingScore(!addingScore)}
+                className="px-3 py-1 border border-blue-300 rounded-md text-sm text-blue-600 hover:bg-blue-50"
+              >
+                {addingScore ? 'Cancel' : 'Add Score'}
+              </button>
             </div>
             <div className="border-t border-gray-200">
+              {addingScore && (
+                <form onSubmit={handleAddLiteracyScore} className="p-4 border-b border-gray-200">
+                  <div className="flex items-end space-x-4">
+                    <div className="flex-grow">
+                      <label htmlFor="score" className="block text-sm font-medium text-gray-700 mb-1">
+                        New Score
+                      </label>
+                      <input
+                        type="number"
+                        id="score"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        value={newScore}
+                        onChange={(e) => setNewScore(e.target.value)}
+                        required
+                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={!newScore}
+                      className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white ${
+                        !newScore ? 'bg-blue-300' : 'bg-blue-600 hover:bg-blue-700'
+                      }`}
+                    >
+                      Add
+                    </button>
+                  </div>
+                </form>
+              )}
+              
               {student.literacyScores && student.literacyScores.length > 0 ? (
                 <ul className="divide-y divide-gray-200">
-                  {student.literacyScores.map((score, index) => (
+                  {[...student.literacyScores]
+                    .sort((a, b) => new Date(b.date) - new Date(a.date))
+                    .map((score, index) => (
                     <li key={index} className="px-4 py-3 flex justify-between items-center">
                       <div className="text-sm text-gray-900">
                         <span className="font-medium">Score: {score.score}</span>

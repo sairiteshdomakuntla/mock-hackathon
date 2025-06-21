@@ -78,11 +78,44 @@ const updateSelScores = async (req, res) => {
   }
 };
 
-// Add this to your exports
+// Add this function to your studentController.js file
+const addLiteracyScore = async (req, res) => {
+  const { score } = req.body;
+  
+  if (score === undefined || isNaN(parseFloat(score))) {
+    return res.status(400).json({ message: 'Valid score is required' });
+  }
+  
+  try {
+    const student = await Student.findOne({ _id: req.params.id, teacherId: req.user._id });
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found' });
+    }
+    
+    const newScore = {
+      score: parseFloat(score),
+      date: new Date()
+    };
+    
+    student.literacyScores.push(newScore);
+    await student.save();
+    
+    res.json({ 
+      message: 'Literacy score added successfully',
+      literacyScores: student.literacyScores
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to add literacy score' });
+  }
+};
+
+// Update your exports
 module.exports = {
   getStudents,
   addStudent,
   getStudentById,
   addReflection,
-  updateSelScores
+  updateSelScores,
+  addLiteracyScore
 };
