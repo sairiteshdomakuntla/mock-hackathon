@@ -3,10 +3,10 @@ dotenv.config();
 
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-console.log("key",process.env.GEMINI_API_KEY)
+// console.log("key",process.env.GEMINI_API_KEY)
 // Add debugging to check if API key is being loaded properly
-console.log('GEMINI_API_KEY exists:', !!process.env.GEMINI_API_KEY);
-console.log('GEMINI_API_KEY first 5 chars:', process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.substring(0, 5) + '...' : 'not available');
+// console.log('GEMINI_API_KEY exists:', !!process.env.GEMINI_API_KEY);
+// console.log('GEMINI_API_KEY first 5 chars:', process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.substring(0, 5) + '...' : 'not available');
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
@@ -18,10 +18,10 @@ const getSuggestion = async (req, res) => {
     let promptParts = [`I need personalized teaching strategies for a student named ${name}.`];
     
     // Log the request data
-    console.log('Gemini request received for student:', name);
-    console.log('Has literacy scores:', !!literacyScores && literacyScores.length > 0);
-    console.log('Has SEL scores:', !!selScores && Object.keys(selScores).length > 0);
-    console.log('Has reflections:', !!reflections && reflections.length > 0);
+    // console.log('Gemini request received for student:', name);
+    // console.log('Has literacy scores:', !!literacyScores && literacyScores.length > 0);
+    // console.log('Has SEL scores:', !!selScores && Object.keys(selScores).length > 0);
+    // console.log('Has reflections:', !!reflections && reflections.length > 0);
     
     // Add literacy score information if available
     if (literacyScores && literacyScores.length > 0) {
