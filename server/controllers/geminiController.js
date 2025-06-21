@@ -79,7 +79,7 @@ Keep your response concise and actionable. Use clear section headings and bullet
     
     // Call Gemini API
     try {
-      console.log('Attempting to call Gemini API with model: gemini-2.0-flash');
+      // console.log('Attempting to call Gemini API with model: gemini-2.0-flash');
       const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
       const result = await model.generateContent(prompt);
       const response = await result.response;
