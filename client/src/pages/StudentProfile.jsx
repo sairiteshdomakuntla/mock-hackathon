@@ -34,6 +34,7 @@ const StudentProfile = () => {
   });
   const [newScore, setNewScore] = useState('');
   const [addingScore, setAddingScore] = useState(false);
+  const [geminiAvailable, setGeminiAvailable] = useState(true); // Optimistically assume it's available
   const { user } = useAuth();
 
   useEffect(() => {
@@ -64,6 +65,25 @@ const StudentProfile = () => {
 
     fetchStudent();
   }, [id, user.token]);
+
+  useEffect(() => {
+    const checkGeminiAvailability = async () => {
+      try {
+        await axios.get('http://localhost:5000/api/gemini/status', {
+          headers: {
+            Authorization: `Bearer ${user.token}`
+          }
+        });
+        setGeminiAvailable(true);
+      } catch (err) {
+        if (err.response && err.response.status === 503) {
+          setGeminiAvailable(false);
+        }
+      }
+    };
+    
+    checkGeminiAvailability();
+  }, [user.token]);
 
   const handleAddReflection = async (e) => {
     e.preventDefault();
@@ -97,6 +117,7 @@ const StudentProfile = () => {
     }
   };
 
+  // Update the handleGetAISuggestion function to send more data
   const handleGetAISuggestion = async () => {
     setLoadingSuggestion(true);
     try {
@@ -104,8 +125,9 @@ const StudentProfile = () => {
         'http://localhost:5000/api/gemini/suggestion',
         {
           name: student.name,
-          literacyScores: student.literacyScores,
-          selScores: student.selScores
+          literacyScores: student.literacyScores || [],
+          selScores: student.selScores || {},
+          reflections: student.reflections || []
         },
         {
           headers: {
@@ -297,12 +319,21 @@ const StudentProfile = () => {
         <div className="md:col-span-2">
           <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
             <div className="px-4 py-5 sm:px-6">
-              <h2 className="text-lg leading-6 font-medium text-gray-900">
-                {student.name}
-              </h2>
-              <p className="mt-1 max-w-2xl text-sm text-gray-500">
-                Student details and assessment information
-              </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg leading-6 font-medium text-gray-900">
+                    {student.name}
+                  </h2>
+                  <p className="mt-1 max-w-2xl text-sm text-gray-500">
+                    Student details and assessment information
+                  </p>
+                </div>
+                {(student.literacyScores?.length > 0 || student.reflections?.length > 0) && (
+                  <span className="px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded-full">
+                    AI Ready
+                  </span>
+                )}
+              </div>
             </div>
             <div className="border-t border-gray-200">
               <dl>
@@ -559,30 +590,79 @@ const StudentProfile = () => {
         <div className="md:col-span-1">
           {/* AI Suggestion Section */}
           <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
-            <div className="px-4 py-5 sm:px-6">
+            <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
               <h2 className="text-lg leading-6 font-medium text-gray-900">AI Teaching Suggestions</h2>
+              {aiSuggestion && (
+                <button
+                  onClick={() => setAiSuggestion('')}
+                  className="text-sm text-gray-500 hover:text-gray-700"
+                >
+                  Get new suggestion
+                </button>
+              )}
             </div>
             <div className="border-t border-gray-200 p-4">
-              {aiSuggestion ? (
+              {!geminiAvailable ? (
+                <div className="text-center py-6">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">API Not Configured</h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    The Gemini AI API is not configured. Please add your API key to the server environment.
+                  </p>
+                </div>
+              ) : loadingSuggestion ? (
+                <div className="flex flex-col items-center justify-center py-6">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mb-4"></div>
+                  <p className="text-sm text-gray-500">Generating personalized suggestions...</p>
+                </div>
+              ) : aiSuggestion ? (
                 <div className="prose prose-sm max-w-none text-gray-700">
-                  {aiSuggestion.split("\n").map((paragraph, i) => (
-                    <p key={i} className="mb-2">
-                      {paragraph}
-                    </p>
-                  ))}
+                  {aiSuggestion.split("\n").map((paragraph, i) => {
+                    // Section headers (starts with number and period or has a colon)
+                    if (/^\d+\./.test(paragraph.trim()) || /^[A-Z].*:/.test(paragraph.trim())) {
+                      return (
+                        <h3 key={i} className="text-md font-medium text-purple-800 mt-4 mb-1">
+                          {paragraph.trim()}
+                        </h3>
+                      );
+                    }
+                    // Bullet points
+                    else if (paragraph.trim().startsWith('-') || paragraph.trim().startsWith('•')) {
+                      return (
+                        <div key={i} className="ml-4 my-1 flex">
+                          <span className="mr-2">{paragraph.trim().startsWith('-') ? '•' : ''}</span>
+                          <span>{paragraph.trim().replace(/^[-•]\s*/, '')}</span>
+                        </div>
+                      );
+                    }
+                    // Regular paragraph with content
+                    else if (paragraph.trim()) {
+                      return <p key={i} className="mb-2">{paragraph.trim()}</p>;
+                    }
+                    // Empty line - small spacer
+                    return <div key={i} className="h-1"></div>;
+                  })}
                 </div>
               ) : (
-                <div className="text-center py-4">
-                  <p className="text-sm text-gray-500 mb-3">
-                    Get AI-powered teaching suggestions based on this student's data.
+                <div className="text-center py-6">
+                  <svg className="mx-auto h-12 w-12 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m0 16v1m-9-9h1m16 0h1m-3.4-6.4l.8.8m-8.8.8l-.8-.8m0 8.8l-.8.8m8.8-.8l.8.8" />
+                  </svg>
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">Get AI-powered teaching insights</h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Receive personalized teaching strategies based on {student.name}'s data
                   </p>
-                  <button
-                    onClick={handleGetAISuggestion}
-                    disabled={loadingSuggestion}
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700 disabled:bg-purple-300"
-                  >
-                    {loadingSuggestion ? 'Loading...' : 'Get Suggestions'}
-                  </button>
+                  <div className="mt-4">
+                    <button
+                      onClick={handleGetAISuggestion}
+                      disabled={loadingSuggestion}
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700 disabled:bg-purple-300"
+                    >
+                      Generate Teaching Suggestions
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
