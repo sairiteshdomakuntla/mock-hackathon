@@ -4,7 +4,8 @@ const {
   getStudents,
   addStudent,
   getStudentById,
-  addReflection
+  addReflection,
+  updateSelScores
 } = require('../controllers/studentController');
 
 const { protect } = require('../middlewares/authMiddleware');
@@ -16,5 +17,6 @@ router.get('/', getStudents);              // GET all students
 router.post('/', addStudent);              // POST new student
 router.get('/:id', getStudentById);        // GET individual student
 router.post('/:id/reflection', addReflection); // POST a reflection
+router.post('/:id/sel-scores', updateSelScores); // Update SEL scores
 
 module.exports = router;

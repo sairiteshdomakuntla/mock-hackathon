@@ -31,16 +31,11 @@ const TeacherDashboard = () => {
 
   return (
     <div className="py-8">
-      <div className="flex justify-between items-center mb-6">
+      <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Teacher Dashboard</h1>
-        <div>
-          <Link 
-            to="/teacher/add-student" 
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
-          >
-            Add New Student
-          </Link>
-        </div>
+        <p className="text-sm text-gray-600 mt-2">
+          View your assigned students and add reflections to track their progress.
+        </p>
       </div>
 
       <div className="bg-white shadow overflow-hidden sm:rounded-lg">
@@ -57,7 +52,10 @@ const TeacherDashboard = () => {
             </div>
           ) : students.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-gray-500">No students found. Add your first student.</p>
+              <p className="text-gray-500">No students have been assigned to you yet.</p>
+              <p className="text-gray-500 text-sm mt-2">
+                Students are added by administrators. Please contact an admin if you need students added to your roster.
+              </p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -77,6 +75,9 @@ const TeacherDashboard = () => {
                       Literacy Score
                     </th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Last Reflection
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
@@ -88,6 +89,11 @@ const TeacherDashboard = () => {
                       ? student.literacyScores.reduce((sum, score) => sum + (score.score || 0), 0) / 
                         student.literacyScores.length
                       : 'N/A';
+                    
+                    // Get the most recent reflection
+                    const lastReflection = student.reflections && student.reflections.length > 0
+                      ? student.reflections.sort((a, b) => new Date(b.date) - new Date(a.date))[0]
+                      : null;
                     
                     return (
                       <tr key={student._id}>
@@ -107,12 +113,21 @@ const TeacherDashboard = () => {
                               : literacyAvg}
                           </div>
                         </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-500">
+                            {lastReflection 
+                              ? <span title={lastReflection.note}>
+                                  {new Date(lastReflection.date).toLocaleDateString()}
+                                </span>
+                              : 'No reflections'}
+                          </div>
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <Link 
                             to={`/teacher/student/${student._id}`}
                             className="text-blue-600 hover:text-blue-900 mr-4"
                           >
-                            View Details
+                            View Profile
                           </Link>
                         </td>
                       </tr>

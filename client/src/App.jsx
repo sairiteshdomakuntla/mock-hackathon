@@ -7,7 +7,6 @@ import UploadCSV from './pages/UploadCSV';
 import ManageUsers from './pages/ManageUsers';
 import UploadHistory from './pages/UploadHistory';
 import StudentProfile from './pages/StudentProfile';
-import AddStudent from './pages/AddStudent';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ProtectedRoute from './routes/ProtectedRoute';
 
@@ -73,15 +72,6 @@ function App() {
                 element={
                   <ProtectedRoute role="teacher">
                     <TeacherDashboard />
-                  </ProtectedRoute>
-                }
-              />
-              
-              <Route
-                path="/teacher/add-student"
-                element={
-                  <ProtectedRoute role="teacher">
-                    <AddStudent />
                   </ProtectedRoute>
                 }
               />

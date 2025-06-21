@@ -67,7 +67,11 @@ const uploadCSV = async (req, res) => {
               class: s.class || 'Unassigned',
               teacherId: teacher._id,
               literacyScores: [],
-              selScores: {},
+              selScores: {
+                empathy: s.empathy ? parseInt(s.empathy) : null,
+                regulation: s.regulation ? parseInt(s.regulation) : null,
+                cooperation: s.cooperation ? parseInt(s.cooperation) : null
+              },
               reflections: [],
             });
             

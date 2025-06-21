@@ -182,10 +182,24 @@ const UploadCSV = () => {
           </p>
           <div className="bg-gray-50 p-4 rounded overflow-auto">
             <pre className="text-xs">
-              name,age,class,teacherEmail
-              John Doe,8,3A,teacher@example.com
-              Jane Smith,7,2B,teacher@example.com
+              name,age,class,teacherEmail,empathy,regulation,cooperation
+              John Doe,8,3A,teacher@example.com,4,3,5
+              Jane Smith,7,2B,teacher@example.com,5,4,3
             </pre>
+          </div>
+          <div className="mt-4">
+            <p className="text-sm text-gray-700">
+              <strong>Fields explanation:</strong>
+            </p>
+            <ul className="text-xs text-gray-600 list-disc pl-5 mt-2">
+              <li><strong>name:</strong> Student's full name (required)</li>
+              <li><strong>age:</strong> Student's age (optional)</li>
+              <li><strong>class:</strong> Class/grade identifier (optional)</li>
+              <li><strong>teacherEmail:</strong> Email of assigned teacher (required)</li>
+              <li><strong>empathy:</strong> SEL empathy score 1-5 (optional)</li>
+              <li><strong>regulation:</strong> SEL self-regulation score 1-5 (optional)</li>
+              <li><strong>cooperation:</strong> SEL cooperation score 1-5 (optional)</li>
+            </ul>
           </div>
           <div className="mt-4 text-sm text-gray-700">
             <strong>Important:</strong> The teacherEmail must match the email of a registered teacher in the system.
