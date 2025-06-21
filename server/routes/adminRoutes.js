@@ -1,10 +1,22 @@
 const express = require('express');
-const router = express.Router();
-const { bulkUpload } = require('../controllers/adminController');
+const { 
+  uploadCSV, 
+  uploadMiddleware, 
+  getUsers, 
+  getUploads, 
+  getSystemStats 
+} = require('../controllers/adminController');
 const { protect } = require('../middlewares/authMiddleware');
 const { isAdmin } = require('../middlewares/roleMiddleware');
-const upload = require('../utils/csvUploader'); // Multer config
 
-router.post('/upload', protect, isAdmin, upload.single('file'), bulkUpload);
+const router = express.Router();
+
+// Apply middleware to all routes
+router.use(protect, isAdmin);
+
+router.post('/upload-csv', uploadMiddleware, uploadCSV);
+router.get('/users', getUsers);
+router.get('/uploads', getUploads);
+router.get('/stats', getSystemStats);
 
 module.exports = router;
